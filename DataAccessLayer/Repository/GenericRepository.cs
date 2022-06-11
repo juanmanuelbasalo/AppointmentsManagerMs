@@ -17,6 +17,11 @@ namespace AppointmentsManagerMs.DataAccessLayer.Repository
             var entities = _dbContext.Set<TEntity>().AsNoTracking();
             return entities;
         }
+        public IQueryable<TEntity> GetAllReadOnly<TEntity>(Expression<Func<TEntity, bool>> searchTerm) where TEntity : BaseEntity
+        {
+            var entities = _dbContext.Set<TEntity>().Where(searchTerm).AsNoTracking();
+            return entities;
+        }
         public void Insert<TEntity>(TEntity entity) where TEntity : BaseEntity
         {
             var entities = _dbContext.Set<TEntity>();

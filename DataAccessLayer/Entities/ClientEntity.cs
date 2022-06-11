@@ -2,7 +2,7 @@
 {
     public class ClientEntity : BaseEntity
     {
-        protected ClientEntity(Guid id) : base(id)
+        public ClientEntity(Guid id) : base(id)
         {
         }
 

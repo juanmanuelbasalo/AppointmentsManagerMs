@@ -2,8 +2,14 @@
 {
     public class AppointmentEntity : BaseEntity
     {
-        protected AppointmentEntity() : base(Guid.NewGuid())
+        public AppointmentEntity() : base(Guid.NewGuid())
         {
         }
+
+        public TimeSpan AppointmentDuration { get; set; }
+        public TimeOnly AppointmentStartsAt { get; set; }
+        public TimeOnly AppointmentEndsAt { get => AppointmentStartsAt.Add(AppointmentDuration); }
+        public DateOnly AppointmentDate { get; set; }
+        public DoctorOfficeEntity DoctorOffice { get; set; }
     }
 }

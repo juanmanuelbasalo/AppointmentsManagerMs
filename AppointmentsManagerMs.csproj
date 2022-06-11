@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <Folder Include="BusinessLayer\Consumers\" />
-    <Folder Include="BusinessLayer\Models\" />
     <Folder Include="BusinessLayer\ServiceBus\" />
   </ItemGroup>
 

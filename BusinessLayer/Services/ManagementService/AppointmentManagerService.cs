@@ -14,13 +14,33 @@ namespace AppointmentsManagerMs.BusinessLayer.Services.ManagementService
 
         public async Task<bool> CreateClientAppointment(CreateClientAppointment clientAppointment)
         {
-            var apt = _genericRepo.GetAllReadOnly<AppointmentEntity>(apt => apt.AppointmentDate == clientAppointment.AppointmentDate);
-            var isAvailable = !apt.Any(apt => IsNotValidAppointmentInterval(clientAppointment.AppointmentStartsAt, apt.AppointmentEndsAt, clientAppointment.AppointmentEndsAt, apt.AppointmentStartsAt));
+            var appointments = _genericRepo.GetAllReadOnly<AppointmentEntity>(apt => apt.AppointmentDate == clientAppointment.AppointmentDate);
+            var isAlreadyTaken = appointments.Any(apt => IsNotValidAppointmentInterval(clientAppointment.AppointmentStartsAt, apt.AppointmentEndsAt, 
+                clientAppointment.AppointmentEndsAt, apt.AppointmentStartsAt));
 
-            return isAvailable;
+            if (isAlreadyTaken)
+                return false;
+
+            AppointmentEntity appointment = new()
+            {
+                AppointmentDate = clientAppointment.AppointmentDate,
+                AppointmentDuration = clientAppointment.AppointmentDuration,
+                AppointmentStartsAt = clientAppointment.AppointmentStartsAt,
+                ClientEmail = clientAppointment.Client.UserEmail,
+                ClientPhone = clientAppointment.Client.UserPhone,
+                ClientFirstName = clientAppointment.Client.Name,
+                ClientLastName = clientAppointment.Client.LastName,
+                DoctorOfficeId = clientAppointment.DoctorOfficeId,
+            };
+
+            _genericRepo.Insert(appointment);
+
+            var isCreated = await _genericRepo.SaveAsync(clientAppointment.Client.UserEmail);
+
+            return isCreated;
         }
 
-        private bool IsNotValidAppointmentInterval(TimeOnly requestedAppointmentStartsAt, TimeOnly existingAppointmentEndsAt,
+        public bool IsNotValidAppointmentInterval(TimeOnly requestedAppointmentStartsAt, TimeOnly existingAppointmentEndsAt,
             TimeOnly requestedAppointmentEndsAt, TimeOnly existingAppointmentStartsAt)
         {
             return requestedAppointmentStartsAt.IsBetween(existingAppointmentStartsAt, existingAppointmentEndsAt) 

@@ -12,7 +12,7 @@ namespace AppointmentsManagerMs.BusinessLayer.Services.ManagementService
             _genericRepo = genericRepo;
         }
 
-        public async Task<bool> CreateClientAppointment(CreateClientAppointment clientAppointment)
+        public async Task<bool> CreateClientAppointmentAsync(CreateClientAppointment clientAppointment)
         {
             var appointments = _genericRepo.GetAllReadOnly<AppointmentEntity>(apt => apt.AppointmentDate == clientAppointment.AppointmentDate);
             var isAlreadyTaken = appointments.Any(apt => IsNotValidAppointmentInterval(clientAppointment.AppointmentStartsAt, apt.AppointmentEndsAt, 

@@ -4,7 +4,7 @@ namespace AppointmentsManagerMs.BusinessLayer.Services.ManagementService
 {
     public interface IAppointmentManagerService
     {
-        Task<bool> CreateClientAppointment(CreateClientAppointment clientAppointment);
+        Task<bool> CreateClientAppointmentAsync(CreateClientAppointment clientAppointment);
         bool IsNotValidAppointmentInterval(TimeOnly requestedAppointmentStartsAt, TimeOnly existingAppointmentEndsAt,
             TimeOnly requestedAppointmentEndsAt, TimeOnly existingAppointmentStartsAt);
     }

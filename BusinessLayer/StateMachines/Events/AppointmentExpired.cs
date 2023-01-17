@@ -1,6 +1,6 @@
 ﻿using MassTransit;
 
-namespace AppointmentsManagerMs.BusinessLayer.Models
+namespace AppointmentsManagerMs.BusinessLayer.StateMachines.Events
 {
     public class AppointmentExpired : CorrelatedBy<Guid>
     {

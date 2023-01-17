@@ -1,4 +1,5 @@
 ﻿using AppointmentsManagerMs.BusinessLayer.Models;
+using AppointmentsManagerMs.BusinessLayer.StateMachines.Events;
 using MassTransit;
 
 namespace AppointmentsManagerMs.BusinessLayer.StateMachines
@@ -7,7 +8,7 @@ namespace AppointmentsManagerMs.BusinessLayer.StateMachines
     {
         public ReservationStateMachine()
         {
-            InstanceState(x => x.CurrentState, Requested, Reserved);
+            InstanceState(x => x.CurrentState, Requested, Accepted);
 
             Schedule(() => ExpirationSchedule, x => x.TokenExpirationId);
 
@@ -15,10 +16,11 @@ namespace AppointmentsManagerMs.BusinessLayer.StateMachines
                 When(AppointmentRequested)
                     .Then(context =>
                     {
-                        context.Saga.Date = context.Message.AppointmentDate;
-                        context.Saga.StartsAt = context.Message.AppointmentStartsAt;
-                        context.Saga.Duration = context.Message.AppointmentDuration;
-                        context.Saga.DoctorOfficeId = context.Message.DoctorOfficeId;
+                        context.Saga.AppointmentId = context.Message.AppointmentId;
+                        context.Saga.Client = context.Message.Client;
+                        context.Saga.Date = context.Message.Date;
+                        context.Saga.StartsAt = context.Message.StartsAt;
+                        context.Saga.Duration = context.Message.Duration;
                     })
                     .TransitionTo(Requested),
                 When(AppointmentReservationExpired)
@@ -26,25 +28,32 @@ namespace AppointmentsManagerMs.BusinessLayer.StateMachines
             );
 
             During(Requested,
-                When(AppointmentReserved)
+                When(AppointmentAccepted)
                     .Then(context => context.Saga.IsReserved = true)
-                    .Schedule(ExpirationSchedule, context => context.Init<AppointmentReservationExpired>(new { AppointmentId = context.Saga.CorrelationId }),
-                               context => context.Saga.Date.ToDateTime(context.Saga.EndsAt))
-                    .TransitionTo(Reserved));
+                    //.Schedule(ExpirationSchedule, context => context.Init<ReservationExpired>(new { context.Saga.AppointmentId }),
+                    //           context => context.Saga.Date.ToDateTime(context.Saga.EndsAt))
+                    .Publish(context => new AppointmentReserved { AppointmentId = context.Saga.AppointmentId })
+                    .TransitionTo(Accepted),
+                When(AppointmentRemoved)
 
-            During(Reserved,
+                    .Finalize()
+            );
+
+            During(Accepted,
                 When(AppointmentReservationExpired)
                     .PublishAsync(context => context.Init<AppointmentExpired>(new
                     {
                         context.Message.AppointmentId
                     }))
                     .Finalize(),
-                When(AppointmentReservationCanceled)
+                When(AppointmentReservationCanceled)    
                     .Unschedule(ExpirationSchedule)
-                    .PublishAsync(context => context.Init<AppointmentExpired>(new
+                    .PublishAsync(context => context.Init<AppointmentCanceled>(new
                     {
-                        context.Message.AppointmentId
+                        context.Saga.AppointmentId
                     }))
+                    .Finalize(),
+                When(AppointmentRemoved)
                     .Finalize()
              );
 
@@ -52,13 +61,14 @@ namespace AppointmentsManagerMs.BusinessLayer.StateMachines
         }
 
         public State Requested { get; }
-        public State Reserved { get; }
+        public State Accepted { get; }
 
-        public Schedule<Reservation, AppointmentReservationExpired> ExpirationSchedule { get; set; }
+        public Schedule<Reservation, ReservationExpired> ExpirationSchedule { get; set; }
 
         public Event<AppointmentRequested> AppointmentRequested { get; }
-        public Event<AppointmentReserved> AppointmentReserved { get; }
-        public Event<AppointmentReservationExpired> AppointmentReservationExpired { get; }
-        public Event<AppointmentReservationCanceled> AppointmentReservationCanceled { get; }
+        public Event<AppointmentAccepted> AppointmentAccepted { get; }
+        public Event<ReservationExpired> AppointmentReservationExpired { get; }
+        public Event<ReservationCanceled> AppointmentReservationCanceled { get; }
+        public Event<AppointmentRemoved> AppointmentRemoved { get; }
     }
 }

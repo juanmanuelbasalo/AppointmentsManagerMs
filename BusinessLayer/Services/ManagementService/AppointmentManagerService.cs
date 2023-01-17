@@ -1,4 +1,7 @@
 ﻿using AppointmentsManagerMs.BusinessLayer.Models;
+using AppointmentsManagerMs.BusinessLayer.StateMachines;
+using AppointmentsManagerMs.BusinessLayer.Utils.AppointmentsValidation;
+using AppointmentsManagerMs.DataAccessLayer;
 using AppointmentsManagerMs.DataAccessLayer.Entities;
 using AppointmentsManagerMs.DataAccessLayer.Repository;
 
@@ -6,45 +9,19 @@ namespace AppointmentsManagerMs.BusinessLayer.Services.ManagementService
 {
     public class AppointmentManagerService : IAppointmentManagerService
     {
-        private readonly IGenericRepository _genericRepo;
-        public AppointmentManagerService(IGenericRepository genericRepo)
+        private readonly IGenericRepository<SagaAppointmentsManagerContext> _repo;
+        public AppointmentManagerService(IGenericRepository<SagaAppointmentsManagerContext> genericRepo)
         {
-            _genericRepo = genericRepo;
+            _repo = genericRepo;
         }
 
-        public async Task<bool> CreateClientAppointmentAsync(CreateClientAppointment clientAppointment)
+        public bool IsTimeSlotTaken(DateOnly appointmentDate, TimeOnly requestedAppointmentStartsAt, TimeOnly requestedAppointmentEndsAt)
         {
-            var appointments = _genericRepo.GetAllReadOnly<AppointmentEntity>(apt => apt.AppointmentDate == clientAppointment.AppointmentDate);
-            var isAlreadyTaken = appointments.Any(apt => IsNotValidAppointmentInterval(clientAppointment.AppointmentStartsAt, apt.AppointmentEndsAt, 
-                clientAppointment.AppointmentEndsAt, apt.AppointmentStartsAt));
+            var appointments = _repo.GetAllReadOnly<Appointment>(apt => apt.AppointmentDate == appointmentDate).ToArray();
+            var isAlreadyTaken = appointments.Any(apt => AppointmentConstraints.IsNotValidAppointmentInterval(requestedAppointmentStartsAt, apt.AppointmentEndsAt,
+                requestedAppointmentEndsAt, apt.AppointmentStartsAt));
 
-            if (isAlreadyTaken)
-                return false;
-
-            AppointmentEntity appointment = new()
-            {
-                AppointmentDate = clientAppointment.AppointmentDate,
-                AppointmentDuration = clientAppointment.AppointmentDuration,
-                AppointmentStartsAt = clientAppointment.AppointmentStartsAt,
-                ClientEmail = clientAppointment.Client.UserEmail,
-                ClientPhone = clientAppointment.Client.UserPhone,
-                ClientFirstName = clientAppointment.Client.Name,
-                ClientLastName = clientAppointment.Client.LastName,
-                DoctorOfficeId = clientAppointment.DoctorOfficeId,
-            };
-
-            _genericRepo.Insert(appointment);
-
-            var isCreated = await _genericRepo.SaveAsync(clientAppointment.Client.UserEmail);
-
-            return isCreated;
-        }
-
-        public bool IsNotValidAppointmentInterval(TimeOnly requestedAppointmentStartsAt, TimeOnly existingAppointmentEndsAt,
-            TimeOnly requestedAppointmentEndsAt, TimeOnly existingAppointmentStartsAt)
-        {
-            return requestedAppointmentStartsAt.IsBetween(existingAppointmentStartsAt, existingAppointmentEndsAt) 
-                || requestedAppointmentEndsAt.IsBetween(existingAppointmentStartsAt, existingAppointmentEndsAt);
+            return isAlreadyTaken;
         }
     }
 }
